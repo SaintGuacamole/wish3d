@@ -53,7 +53,7 @@ def decode_latents_to_files(latents: torch.Tensor) -> List:
             t = decode_latent_mesh(transmitter, _latent).tri_mesh()
             t.write_obj(f)
         f.close()
-        filenames.append(f'mesh_{_i}.obj')
+        filenames.append(f'sample_{_i}.obj')
 
     return filenames
 
