@@ -1,5 +1,8 @@
 #!/bin/sh
 
+echo loading eth_proxy
+module load eth_proxy
+
 echo loading gcc
 module load gcc/8.2.0
 
@@ -29,9 +32,6 @@ pip3 install "uvicorn[standard]"
 
 echo installing shap-e
 pip3 install -e .
-
-echo loading eth_proxy
-module load eth_proxy
 
 echo starting api
 python uvicorn main:app --reload

@@ -7,6 +7,7 @@ Forked from https://github.com/openai/shap-e
 uvicorn main:app --reload
 
 #euler
+env2lmod
 sbatch .start
 
 #copy file from euler
