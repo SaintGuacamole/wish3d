@@ -34,4 +34,4 @@ echo installing shap-e
 pip3 install -e .
 
 echo starting api
-python uvicorn main:app --reload
+uvicorn main:app --reload
