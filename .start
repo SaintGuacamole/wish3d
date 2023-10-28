@@ -1,8 +1,5 @@
 #!/bin/sh
 
-env2lmod
-
-
 echo loading gcc
 module load gcc/8.2.0
 
