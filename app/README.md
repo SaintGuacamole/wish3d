@@ -6,6 +6,8 @@ Forked from https://github.com/openai/shap-e
 # Run this command from a shell at shap-e to start the api.
 uvicorn main:app --reload
 
+uvicorn main:app --reload --host 0.0.0.0 --port 80
+
 #euler
 env2lmod
 sbatch .start
