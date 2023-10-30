@@ -1,3 +1,5 @@
+#!/bin/sh
+
 echo loading eth_proxy
 module load eth_proxy
 
