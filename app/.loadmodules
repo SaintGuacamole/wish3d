@@ -33,6 +33,6 @@ pip3 install "uvicorn[standard]"
 echo installing shap-e
 pip3 install -e .
 
-sbatch --ntasks=4 --gpus=1 --time=2:00:00 --mem-per-cpu=8000 --wrap="bash .start"
+sbatch --ntasks=4 --gpus=1 --gres=gpumem:10g --time=2:00:00 --mem-per-cpu=8000 --wrap="bash .start"
 
 squeue
