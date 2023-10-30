@@ -9,11 +9,25 @@ uvicorn main:app --reload
 uvicorn main:app --reload --host 0.0.0.0 --port 80
 
 #euler
-env2lmod
-sbatch .start
+srun --ntasks=1 --gpus=1 --time=2:00:00 --mem-per-cpu=5000 --pty bash
 
+env2lmod
+
+sbatch .loadmodules
+
+hostname -i #10.204.97.75
+
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+
+ssh <user>@euler.ethz.ch -L 8000:<ip>:8000 -N &
+
+#ssh winklerr@euler.ethz.ch -L 8000:10.204.97.75:8000 -N
 #copy file from euler
 scp <username>@euler.ethz.ch:<path> .
+
+
+
+Load required modules
 ```
 
 Endpoint will be available at http://localhost:8000/shape

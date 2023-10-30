@@ -1,15 +1,15 @@
+#FROM tiangolo/uvicorn-gunicorn:python3.11-slim
+FROM python:3.11
 
-FROM python:3.9
+RUN apt-get update && apt-get install -y netcat-traditional && apt-get install -y --no-install-recommends git
 
-#
 WORKDIR /app
 
-#
 COPY . ./
 
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-
 RUN pip install -e app/
+
+RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
 RUN pip install transformers
 
@@ -23,4 +23,4 @@ RUN pip install ipywidgets
 
 RUN pip install python-multipart
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "main:app", "--host", "127.0.0.1", "--port", "80"]
