@@ -33,5 +33,10 @@ pip3 install "uvicorn[standard]"
 echo installing shap-e
 pip3 install -e .
 
+compute_ip=$(hostname -i)
+echo compute_ip
+
+echo "$compute_ip" >> /cluster/home/$VSC_USERNAME/compute_node_ip
+
 echo starting api
-uvicorn main:app --reload
+uvicorn main:app --host 127.0.0.1 --port 80
