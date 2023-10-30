@@ -28,7 +28,7 @@ ssh winklerr@euler.ethz.ch -L 8080:129.132.93.117:8080
 #copy file from euler
 scp <username>@euler.ethz.ch:<path> .
 
-
+scp winklerr@euler.ethz.ch:wish3d/app/slurm-33867502.out .
 
 Load required modules
 ```

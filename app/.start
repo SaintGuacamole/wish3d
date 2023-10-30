@@ -1,5 +1,10 @@
 #!/bin/sh
 
+#SBATCH --ntasks=1
+#SBATCH --time=2:00:00
+#SBATCH --mem-per-cpu=5000
+#SBATCH --gpus=1
+
 echo loading eth_proxy
 module load eth_proxy
 
@@ -36,7 +41,7 @@ pip3 install -e .
 compute_ip=$(hostname -i)
 echo compute_ip
 
-echo "$compute_ip" >> /cluster/home/$VSC_USERNAME/compute_node_ip
+echo "$compute_ip" >> /cluster/home/winklerr/wish3d/app/compute_node_id
 
 echo starting api
 uvicorn main:app --host 127.0.0.1 --port 80
