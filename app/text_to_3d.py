@@ -61,6 +61,22 @@ def decode_latents_to_files(latents: torch.Tensor) -> List:
     return filenames
 
 
+def decode_single_file(latents: torch.Tensor):
+    t = decode_latent_mesh(transmitter, latents[0]).tri_mesh()
+    vertex_colors = np.stack([t.vertex_channels[x] for x in "RGB"], axis=1)
+    vertices = [
+        "{} {} {} {} {} {}".format(*coord, *color)
+        for coord, color in zip(t.verts.tolist(), vertex_colors.tolist())
+    ]
+    faces = [
+        "f {} {} {}".format(str(tri[0] + 1), str(tri[1] + 1), str(tri[2] + 1))
+        for tri in t.faces.tolist()
+    ]
+
+    combined_data = ["v " + vertex for vertex in vertices] + faces
+    return "\n".join(combined_data)
+
+
 def decode_latents_to_mesh(latents: torch.Tensor):
     meshes = {}
     for _i, _latent in enumerate(latents):

@@ -1,12 +1,8 @@
 import torch
-from transformers import Speech2TextProcessor, Speech2TextForConditionalGeneration
-# import soundfile as sf
 
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
-
-
-
 import librosa
+
 
 SAMPLERATE = 16000
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

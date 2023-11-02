@@ -1,14 +1,14 @@
-import io
+
 import json
 import time
 
-import librosa
+
 import numpy as np
-from fastapi import FastAPI, File, UploadFile, Response
-from starlette.responses import JSONResponse
+from fastapi import FastAPI, UploadFile, Response
 
 from speech_to_text import whisper_to_text
-from text_to_3d import get_latents, decode_latents_to_files, create_zipped_response, decode_latents_to_mesh
+from text_to_3d import get_latents, decode_latents_to_files, create_zipped_response, decode_latents_to_mesh, \
+    decode_single_file
 
 app = FastAPI()
 
@@ -41,6 +41,8 @@ class NumpyEncoder(json.JSONEncoder):
 
 @app.post("/audio_to_obj")
 def voice_to_text(audio: UploadFile, nr_samples: int = 1):
+    if nr_samples > 1:
+        return Response("can't generate more than 1 file", status_code=400)
     print(f"Start, requested {nr_samples} sample{'s' if nr_samples > 1 else ''}")
     begin = time.time()
     text = whisper_to_text(audio.file)[0]
@@ -48,10 +50,10 @@ def voice_to_text(audio: UploadFile, nr_samples: int = 1):
     print(f"Text at {time.time() - begin} s, {text}")
 
     _latents = get_latents(text, nr_samples)
-    meshes = decode_latents_to_mesh(_latents)
+    obj = decode_single_file(_latents)
+    return Response(obj, media_type="text/plain")
+    # meshes = decode_latents_to_mesh(_latents)
 
-    print(meshes.keys())
-    return json.dumps(meshes, cls=NumpyEncoder)
-    # _filenames = decode_latents_to_files(_latents)
-    # return create_zipped_response(_filenames)
+    # print(meshes.keys())
+    # return json.dumps(meshes, cls=NumpyEncoder)
 
