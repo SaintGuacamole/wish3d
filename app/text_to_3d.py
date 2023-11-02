@@ -3,6 +3,7 @@ import zipfile
 from io import StringIO, BytesIO
 from typing import List
 
+import numpy as np
 import torch
 from fastapi.responses import Response
 
@@ -14,35 +15,37 @@ from shap_e.util.notebooks import decode_latent_mesh
 GUIDANCE_SCALE = 15.
 ZIP_SUB_DIRECTORY = "archive"
 
-print("If running for the first time, model download will take several minutes")
-
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"If running for the first time, model download will take several minutes, device: {device}")
+
+
+# device = 'cuda'
 transmitter = load_model('transmitter', device=device)
 text_to_geom_model = load_model('text300M', device=device)
 diffusion = diffusion_from_config(load_config('diffusion'))
 
-print("Models are loaded, API available momentarily")
+print(f"Models are loaded, API available momentarily, device: {device}")
 
 
 def get_latents(prompt: str, nr_samples: int):
     _prompt = [prompt] * nr_samples
     _batch_size = len(_prompt)
-
-    _latents = sample_latents(
-        batch_size=_batch_size,
-        model=text_to_geom_model,
-        diffusion=diffusion,
-        guidance_scale=GUIDANCE_SCALE,
-        model_kwargs=dict(texts=_prompt),
-        progress=True,
-        clip_denoised=True,
-        use_fp16=True,
-        use_karras=True,
-        karras_steps=32,
-        sigma_min=1e-3,
-        sigma_max=160,
-        s_churn=0,
-    )
+    with torch.no_grad():
+        _latents = sample_latents(
+            batch_size=_batch_size,
+            model=text_to_geom_model,
+            diffusion=diffusion,
+            guidance_scale=GUIDANCE_SCALE,
+            model_kwargs=dict(texts=_prompt),
+            progress=True,
+            clip_denoised=True,
+            use_fp16=True,
+            use_karras=True,
+            karras_steps=32,
+            sigma_min=1e-3,
+            sigma_max=160,
+            s_churn=0,
+        )
     return _latents
 
 
@@ -56,6 +59,20 @@ def decode_latents_to_files(latents: torch.Tensor) -> List:
         filenames.append(f'sample_{_i}.obj')
 
     return filenames
+
+
+def decode_latents_to_mesh(latents: torch.Tensor):
+    meshes = {}
+    for _i, _latent in enumerate(latents):
+        t = decode_latent_mesh(transmitter, _latent).tri_mesh()
+        meshes[str(_i)] = {
+            "v": t.verts.flatten(),
+            "f": t.faces.flatten(),
+            "r": t.vertex_channels['R'].flatten(),
+            "g": t.vertex_channels['G'].flatten(),
+            "b": t.vertex_channels['B'].flatten()
+        }
+    return meshes
 
 
 def create_zipped_response(filenames):
