@@ -3,6 +3,7 @@ import zipfile
 from io import StringIO, BytesIO
 from typing import List
 
+import pymeshlab as ml
 import numpy as np
 import torch
 from fastapi.responses import Response
@@ -61,20 +62,36 @@ def decode_latents_to_files(latents: torch.Tensor) -> List:
     return filenames
 
 
-def decode_single_file(latents: torch.Tensor):
-    t = decode_latent_mesh(transmitter, latents[0]).tri_mesh()
-    vertex_colors = np.stack([t.vertex_channels[x] for x in "RGB"], axis=1)
-    vertices = [
-        "{} {} {} {} {} {}".format(*coord, *color)
-        for coord, color in zip(t.verts.tolist(), vertex_colors.tolist())
-    ]
-    faces = [
-        "f {} {} {}".format(str(tri[0] + 1), str(tri[1] + 1), str(tri[2] + 1))
-        for tri in t.faces.tolist()
-    ]
+def decode_single_file(latents: torch.Tensor, filename: str):
 
-    combined_data = ["v " + vertex for vertex in vertices] + faces
-    return "\n".join(combined_data)
+    t = decode_latent_mesh(transmitter, latents[0]).tri_mesh()
+
+    colors = []
+    # for i in range(len(t.verts)):
+    #     colors.append([
+    #         t.vertex_channels["R"][i],
+    #         t.vertex_channels["G"][i],
+    #         t.vertex_channels["B"][i],
+    #         1.0
+    #     ])
+    m = ml.Mesh(t.verts[:, [1, 2, 0]], t.faces)
+    # vertex_colors = np.stack([t.vertex_channels[x] for x in "RGB"], axis=1)
+    # vertices = [
+    #     "{} {} {} {} {} {}".format(*coord, *color)
+    #     for coord, color in zip(t.verts.tolist(), vertex_colors.tolist())
+    # ]
+    # faces = [
+    #     "f {} {} {}".format(str(tri[0] + 1), str(tri[1] + 1), str(tri[2] + 1))
+    #     for tri in t.faces.tolist()
+    # ]
+
+
+    ms = ml.MeshSet()
+    ms.add_mesh(m, mesh_name="mesh")
+    ms.apply_filter('meshing_decimation_quadric_edge_collapse', targetfacenum=1000)
+
+    ms.save_current_mesh(filename)
+    return filename
 
 
 def decode_latents_to_mesh(latents: torch.Tensor):
