@@ -2,6 +2,7 @@ import os
 import zipfile
 from io import StringIO, BytesIO
 from typing import List
+from uuid import UUID
 
 import pymeshlab as ml
 import numpy as np
@@ -28,7 +29,7 @@ diffusion = diffusion_from_config(load_config('diffusion'))
 print(f"Models are loaded, API available momentarily, device: {device}")
 
 
-def get_latents(prompt: str, nr_samples: int):
+def get_latents(prompt: str, nr_samples: int, karras_steps: int = 32, sigma_min: float = 1e-3, sigma_max: float = 160.):
     _prompt = [prompt] * nr_samples
     _batch_size = len(_prompt)
     with torch.no_grad():
@@ -42,9 +43,9 @@ def get_latents(prompt: str, nr_samples: int):
             clip_denoised=True,
             use_fp16=True,
             use_karras=True,
-            karras_steps=32,
-            sigma_min=1e-3,
-            sigma_max=160,
+            karras_steps=karras_steps,
+            sigma_min=sigma_min,
+            sigma_max=sigma_max,
             s_churn=0,
         )
     return _latents
@@ -60,6 +61,51 @@ def decode_latents_to_files(latents: torch.Tensor) -> List:
         filenames.append(f'sample_{_i}.obj')
 
     return filenames
+
+
+def decode_dict(latents: torch.Tensor, task_id: UUID, target_nr_faces: int = 1000):
+    meshes = []
+    for i in range(latents.shape[0]):
+        t = decode_latent_mesh(transmitter, latents[i])
+        colors = []
+        R = t.vertex_channels["R"].cpu().numpy()
+        G = t.vertex_channels["G"].cpu().numpy()
+        B = t.vertex_channels["B"].cpu().numpy()
+
+        rgba_matrix = np.column_stack((R, G, B, np.ones_like(R)))
+
+        m = ml.Mesh(
+            vertex_matrix=t.verts[:, [1, 2, 0]].cpu().numpy(),
+            face_matrix=t.faces.cpu().numpy(),
+            v_color_matrix=rgba_matrix
+        )
+
+        ms = ml.MeshSet()
+        ms.add_mesh(m, mesh_name="mesh")
+        ms.apply_filter('meshing_decimation_quadric_edge_collapse', targetfacenum=target_nr_faces)
+
+        v = np.array(ms.current_mesh().vertex_matrix())
+        f = np.array(ms.current_mesh().face_matrix())
+        vertex_color_matrix = np.array(ms.current_mesh().vertex_color_matrix())
+
+        meshes.append(
+            dict(
+                UUID=str(task_id) + '-' + str(i),
+                Mesh=dict(
+                    Vertices=dict(
+                        X=v[:, 0],
+                        Y=v[:, 1],
+                        Z=v[:, 2]
+                    ),
+                    R=vertex_color_matrix[:, 0],
+                    G=vertex_color_matrix[:, 1],
+                    B=vertex_color_matrix[:, 2]
+                ),
+                Triangles=f.flatten()
+            )
+        )
+
+    return meshes
 
 
 def decode_single_file(latents: torch.Tensor, filename: str):
