@@ -1,3 +1,4 @@
+import json
 import os
 import zipfile
 from io import StringIO, BytesIO
@@ -93,15 +94,15 @@ def decode_dict(latents: torch.Tensor, task_id: UUID, target_nr_faces: int = 100
                 UUID=str(task_id) + '-' + str(i),
                 Mesh=dict(
                     Vertices=dict(
-                        X=v[:, 0],
-                        Y=v[:, 1],
-                        Z=v[:, 2]
+                        X=v[:, 0].tolist(),
+                        Y=v[:, 1].tolist(),
+                        Z=v[:, 2].tolist()
                     ),
-                    R=vertex_color_matrix[:, 0],
-                    G=vertex_color_matrix[:, 1],
-                    B=vertex_color_matrix[:, 2]
+                    R=vertex_color_matrix[:, 0].tolist(),
+                    G=vertex_color_matrix[:, 1].tolist(),
+                    B=vertex_color_matrix[:, 2].tolist()
                 ),
-                Triangles=f.flatten()
+                Triangles=f.flatten().tolist()
             )
         )
 

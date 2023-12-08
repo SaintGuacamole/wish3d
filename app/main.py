@@ -6,7 +6,8 @@ import uuid
 
 import numpy as np
 from fastapi import FastAPI, UploadFile, Response
-from starlette.responses import FileResponse
+from fastapi.encoders import jsonable_encoder
+from starlette.responses import FileResponse, JSONResponse
 
 from speech_to_text import whisper_to_text
 from text_to_3d import get_latents, decode_latents_to_files, create_zipped_response, decode_latents_to_mesh, \
@@ -76,5 +77,7 @@ def voice_to_text(
     # meshes = decode_latents_to_mesh(_latents)
 
     # print(meshes.keys())
-    return json.dumps(meshes, cls=NumpyEncoder)
+    json_data = jsonable_encoder(meshes)
+    return JSONResponse(json_data)
+    # return json.dumps(meshes)
 
