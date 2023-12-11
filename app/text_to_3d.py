@@ -1,7 +1,7 @@
 import json
 import os
 import zipfile
-from io import StringIO, BytesIO
+from io import BytesIO
 from typing import List
 from uuid import UUID
 
@@ -14,6 +14,7 @@ from shap_e.diffusion.sample import sample_latents
 from shap_e.diffusion.gaussian_diffusion import diffusion_from_config
 from shap_e.models.download import load_model, load_config
 from shap_e.util.notebooks import decode_latent_mesh
+from text_utils import split_prompt
 
 GUIDANCE_SCALE = 15.
 ZIP_SUB_DIRECTORY = "archive"
@@ -30,7 +31,7 @@ diffusion = diffusion_from_config(load_config('diffusion'))
 print(f"Models are loaded, API available momentarily, device: {device}")
 
 
-def get_latents(prompt: str, nr_samples: int, karras_steps: int = 32, sigma_min: float = 1e-3, sigma_max: float = 160.):
+def get_latents(prompt: str, nr_samples: int):
     _prompt = [prompt] * nr_samples
     _batch_size = len(_prompt)
     with torch.no_grad():
@@ -44,9 +45,32 @@ def get_latents(prompt: str, nr_samples: int, karras_steps: int = 32, sigma_min:
             clip_denoised=True,
             use_fp16=True,
             use_karras=True,
-            karras_steps=karras_steps,
-            sigma_min=sigma_min,
-            sigma_max=sigma_max,
+            karras_steps=32,
+            sigma_min=1e-3,
+            sigma_max=160.,
+            s_churn=0,
+        )
+    return _latents
+
+
+def get_latents_multi_prompt(prompt: str, task_base_path: str):
+
+    _prompt = split_prompt(prompt, task_base_path)
+    _batch_size = len(_prompt)
+    with torch.no_grad():
+        _latents = sample_latents(
+            batch_size=_batch_size,
+            model=text_to_geom_model,
+            diffusion=diffusion,
+            guidance_scale=GUIDANCE_SCALE,
+            model_kwargs=dict(texts=_prompt),
+            progress=True,
+            clip_denoised=True,
+            use_fp16=True,
+            use_karras=True,
+            karras_steps=32,
+            sigma_min=1e-3,
+            sigma_max=160.,
             s_churn=0,
         )
     return _latents
@@ -64,11 +88,10 @@ def decode_latents_to_files(latents: torch.Tensor) -> List:
     return filenames
 
 
-def decode_dict(latents: torch.Tensor, task_id: UUID, target_nr_faces: int = 1000):
+def decode_dict(latents: torch.Tensor, task_id: UUID, task_base_path: str, target_nr_faces: int = 1000):
     meshes = []
     for i in range(latents.shape[0]):
         t = decode_latent_mesh(transmitter, latents[i])
-        colors = []
         R = t.vertex_channels["R"].cpu().numpy()
         G = t.vertex_channels["G"].cpu().numpy()
         B = t.vertex_channels["B"].cpu().numpy()
@@ -83,10 +106,12 @@ def decode_dict(latents: torch.Tensor, task_id: UUID, target_nr_faces: int = 100
 
         ms = ml.MeshSet()
         ms.add_mesh(m, mesh_name="mesh")
-        ms.apply_filter('meshing_decimation_quadric_edge_collapse', targetfacenum=target_nr_faces)
-
+        # ms.apply_filter('meshing_decimation_quadric_edge_collapse', targetfacenum=target_nr_faces)
+        ms.save_current_mesh("test.obj")
         v = np.array(ms.current_mesh().vertex_matrix())
         f = np.array(ms.current_mesh().face_matrix())
+        # f[:, [0, 2]] = f[:, [2, 0]]
+        # n = np.array(ms.current_mesh().face_normal_matrix())
         vertex_color_matrix = np.array(ms.current_mesh().vertex_color_matrix())
 
         meshes.append(
@@ -100,12 +125,16 @@ def decode_dict(latents: torch.Tensor, task_id: UUID, target_nr_faces: int = 100
                     ),
                     R=vertex_color_matrix[:, 0].tolist(),
                     G=vertex_color_matrix[:, 1].tolist(),
-                    B=vertex_color_matrix[:, 2].tolist()
+                    B=vertex_color_matrix[:, 2].tolist(),
+                    # Normals=n.tolist(),
                 ),
                 Triangles=f.flatten().tolist()
             )
         )
-
+    if task_base_path:
+        with open(os.path.join(task_base_path, "meshes.json"), 'w+') as jf:
+            json.dump(meshes, jf)
+        jf.close()
     return meshes
 
 
@@ -178,3 +207,4 @@ def create_zipped_response(filenames):
     # ..and correct content-disposition
 
     return resp
+
