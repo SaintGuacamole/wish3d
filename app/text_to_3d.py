@@ -55,7 +55,7 @@ def get_latents(prompt: str, nr_samples: int):
 
 def get_latents_multi_prompt(prompt: str, task_base_path: str):
 
-    _prompt = split_prompt(prompt, task_base_path)
+    _prompt, _scales = split_prompt(prompt, task_base_path)
     _batch_size = len(_prompt)
     with torch.no_grad():
         _latents = sample_latents(
@@ -73,7 +73,7 @@ def get_latents_multi_prompt(prompt: str, task_base_path: str):
             sigma_max=160.,
             s_churn=0,
         )
-    return _latents
+    return _latents, _scales
 
 
 def decode_latents_to_files(latents: torch.Tensor) -> List:
@@ -88,7 +88,7 @@ def decode_latents_to_files(latents: torch.Tensor) -> List:
     return filenames
 
 
-def decode_dict(latents: torch.Tensor, task_id: UUID, task_base_path: str, target_nr_faces: int = 1000):
+def decode_dict(latents: torch.Tensor, scales: List[float], task_id: UUID, task_base_path: str, target_nr_faces: int = 1000):
     meshes = []
     for i in range(latents.shape[0]):
         t = decode_latent_mesh(transmitter, latents[i])
@@ -117,6 +117,7 @@ def decode_dict(latents: torch.Tensor, task_id: UUID, task_base_path: str, targe
         meshes.append(
             dict(
                 UUID=str(task_id) + '-' + str(i),
+                Scale=scales[i],
                 Mesh=dict(
                     Vertices=dict(
                         X=v[:, 0].tolist(),

@@ -32,9 +32,9 @@ def text_to_obj(prompt: str):
     task_base_path = f'F:/wish3d/{str(task_id)}'
     os.mkdir(task_base_path)
 
-    _latents = get_latents_multi_prompt(prompt, task_base_path)
+    _latents, _scales = get_latents_multi_prompt(prompt, task_base_path)
 
-    meshes = decode_dict(_latents, task_id, task_base_path)
+    meshes = decode_dict(_latents, _scales, task_id, task_base_path)
 
     json_data = jsonable_encoder(meshes)
     return JSONResponse(json_data)
@@ -60,11 +60,11 @@ def voice_to_obj(
     text_timing = time.time() - text_timing
 
     latent_timing = time.time()
-    _latents = get_latents_multi_prompt(text, task_base_path)
+    _latents, _scales = get_latents_multi_prompt(text, task_base_path)
     latent_timing = time.time() - latent_timing
 
     decode_timing = time.time()
-    meshes = decode_dict(_latents, task_id, task_base_path, target_nr_faces)
+    meshes = decode_dict(_latents, _scales, task_id, task_base_path, target_nr_faces)
     decode_timing = time.time() - decode_timing
 
     json_data = jsonable_encoder(meshes)

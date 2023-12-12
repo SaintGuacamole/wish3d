@@ -1,13 +1,16 @@
 import json
 import os
 import re
-from typing import List, Union
+from typing import List, Union, Tuple
+
+import numpy as np
 
 pattern = r"(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|ninceteen|twenty|\d+)\s+"
 
 preamble = r'(show me|give me|show|give|generate|create|create for me)\s+'
 as_pattern = r'\ba\b\s+(\w+)'
 
+size_pattern = r"(tiny|small|medium|large|big|giant)\s+"
 
 def clean_prompt(prompt: str, remove_a_s: bool = False) -> str:
     prompt = prompt.lower()
@@ -44,11 +47,12 @@ numbers = [
 ]
 
 
-def split_prompt(prompt: str, task_base_path: Union[str, None]) -> List[str]:
+def split_prompt(prompt: str, task_base_path: Union[str, None]) -> Tuple[List[str], List[float]]:
     _prompt = clean_prompt(prompt)
     prompts = _prompt.split(" and ")
 
     tasks = []
+    scales = []
     for prompt in prompts:
         prompt = prompt.replace(",", "").replace(".", "").replace("?", "").replace("!", "")
 
@@ -67,8 +71,25 @@ def split_prompt(prompt: str, task_base_path: Union[str, None]) -> List[str]:
         else:
             num = 1
 
+        _match = re.search(size_pattern, prompt)
+        size = 1.0
+        if _match:
+            prompt = re.sub(size_pattern, "", prompt)
+
+            if str(_match.group(1)).strip() == "tiny":
+                size = 0.25
+            if str(_match.group(1)).strip() == "small":
+                size = 0.5
+            elif str(_match.group(1)).strip() == "large":
+                size = 2.0
+            elif str(_match.group(1)).strip() == "big":
+                size = 2.0
+            elif str(_match.group(1)).strip() == "large":
+                size = 4.0
+
         num = max(1, min(num, 20))
         tasks.extend([prompt] * num)
+        scales.extend([size] * num)
 
     if task_base_path:
         with open(os.path.join(task_base_path, "text.json"), 'w+') as jf:
@@ -76,13 +97,15 @@ def split_prompt(prompt: str, task_base_path: Union[str, None]) -> List[str]:
                 dict(
                     prompt=_prompt,
                     split=prompts,
-                    tasks=tasks
+                    tasks=tasks,
+                    scales=scales
                 ), jf)
         jf.close()
-
-    return tasks
+    if len(scales) != len(tasks):
+        scales = np.ones(len(tasks)).tolist()
+    return tasks, scales
 
 
 if __name__ == "__main__":
-    text = "give me 7 penguins"
+    text = "give me 2 small penguins"
     print(split_prompt(text, None))
